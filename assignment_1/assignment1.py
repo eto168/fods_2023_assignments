@@ -54,7 +54,7 @@ def gradient_descent(beta, x, y, lmbd=None):
         lmbd (int): lambda for ridge regularization. If lmbd provided, it is using ridge regularizer.
 
     Returns:
-        _type_: Last gradient and optimal beta
+        _type_: Last gradient, function value, and optimal beta
     """
 
     # message to indicate ridge
@@ -75,10 +75,15 @@ def gradient_descent(beta, x, y, lmbd=None):
     gradient_new = None
 
     num_evals = 0
+    list_of_function_values = {}  # list of function values to plot training progress.
     while True:
         # gradient descent step.
         beta_new = beta_old - step_size * gradient_old
         gradient_new = get_poisson_gradient(beta_new, x, y, lmbd)
+
+        # for every 5th, get and save function value
+        if num_evals % 1 == 0:
+            list_of_function_values[beta_new] = get_function_value(beta_new, x, y)
 
         # Break condition: if gradient shrinks smaller than defined epsilon.
         # or if we've reached max evals.
@@ -93,7 +98,7 @@ def gradient_descent(beta, x, y, lmbd=None):
         beta_old = beta_new
 
     # return information
-    return gradient_new, beta_new
+    return gradient_new, beta_new, list_of_function_values
 
 
 def fit(x, y, lmbd=None):
@@ -101,8 +106,10 @@ def fit(x, y, lmbd=None):
     beta_guess = 0
 
     # pass lmbd if ridge regularized
-    optimal_beta = gradient_descent(beta_guess, x, y, lmbd)
-    return optimal_beta
+    last_gradient, optimal_beta, list_of_function_values = gradient_descent(
+        beta_guess, x, y, lmbd
+    )
+    return last_gradient, optimal_beta, list_of_function_values
 
 
 def random_sample(beta, n):
@@ -120,29 +127,35 @@ def random_sample(beta, n):
 
 
 def main():
+    os.chdir("/Users/et/Documents/WCM/courses/FODS/assignments/fods_2023_assignments")
+    print(os.getcwd())
+
+    # set seed
     np.random.seed(10)
 
-    x, y = random_sample(beta=3, n=20)
+    sample_size = 20
+
+    x, y = random_sample(beta=3, n=sample_size)
+    print(x)
+    print(y)
 
     ################ Original Data ################
     plt.figure()
     plt.scatter(x, y, marker="o", color="blue", label="original")
     plt.xlabel("x value")
     plt.ylabel("y value")
-    filename = Path(
-        "fods_2023_assignments", "assignment_1", "figures", "data_seed_10.pdf"
-    )
+    filename = Path("assignment_1", "figures", "data_seed_10.pdf")
     print("Saving to", filename)
     plt.savefig(filename)
 
     ################ modified poisson ################
     # fit unregularized modified poisson:
-    mp_gradient, mp_optimal_beta = fit(x, y)
+    mp_gradient, mp_optimal_beta, mp_list_of_function_values = fit(x, y)
     print("optimal beta: " + str(mp_optimal_beta))
     print("final gradient: " + str(mp_gradient))
 
     # plot with fitted model
-    x_mp, y_mp = random_sample(beta=mp_optimal_beta, n=20)
+    x_mp, y_mp = random_sample(beta=mp_optimal_beta, n=sample_size)
 
     # plot data
     plt.figure()
@@ -152,33 +165,139 @@ def main():
     plt.xlabel("x value")
     plt.ylabel("y value")
     plt.legend()
-    filename = Path(
-        "fods_2023_assignments", "assignment_1", "figures", "modified_poisson_fit.pdf"
-    )
+    filename = Path("assignment_1", "figures", "modified_poisson_fit.pdf")
     print("Saving to", filename)
     plt.savefig(filename)
 
     ################ ridge modified poisson ################
-    rmp_gradient, rmp_optimal_beta = fit(x, y, lmbd=0.2)
-    print("ridge optimal beta: " + str(rmp_optimal_beta))
-    print("ridge final gradient: " + str(rmp_gradient))
+    (
+        rmp_gradient_lambda_1,
+        rmp_optimal_beta_lambda_1,
+        rmp_list_of_function_values_lambda_1,
+    ) = fit(x, y, lmbd=1)
+    (
+        rmp_gradient_lambda_100,
+        rmp_optimal_beta_lambda_100,
+        rmp_list_of_function_values_lambda_100,
+    ) = fit(x, y, lmbd=100)
+    (
+        rmp_gradient_lambda_500,
+        rmp_optimal_beta_lambda_500,
+        rmp_list_of_function_values_lambda_500,
+    ) = fit(x, y, lmbd=500)
 
     # plot with fitted model
-    x_rmp, y_rmp = random_sample(beta=rmp_optimal_beta, n=20)
+    x_rmp_lambda_1, y_rmp_lambda_1 = random_sample(
+        beta=rmp_optimal_beta_lambda_1, n=sample_size
+    )
+    x_rmp_lambda_100, y_rmp_lambda_100 = random_sample(
+        beta=rmp_optimal_beta_lambda_100, n=sample_size
+    )
+    x_rmp_lambda_500, y_rmp_lambda_500 = random_sample(
+        beta=rmp_optimal_beta_lambda_500, n=sample_size
+    )
 
     # plot data
     plt.figure()
     plt.scatter(x, y, marker="o", c="blue", label="original")
     # plot a second layer
-    plt.scatter(x_rmp, y_rmp, marker="*", c="red", label="ridge modified poisson")
+    plt.scatter(
+        x_rmp_lambda_1,
+        y_rmp_lambda_1,
+        marker="*",
+        c="red",
+        label="ridge modified poisson lambda = 1",
+    )
+    plt.xlabel("x value")
+    plt.ylabel("y value")
+    plt.legend()
+
+    filename = Path(
+        "assignment_1",
+        "figures",
+        "ridge_modified_poisson_fit_lmbd_1.pdf",
+    )
+    print("Saving to", filename)
+    plt.savefig(filename)
+
+    plt.figure()
+    plt.scatter(x, y, marker="o", c="blue", label="original")
+    # plot a second layer
+    plt.scatter(
+        x_rmp_lambda_100,
+        y_rmp_lambda_100,
+        marker="*",
+        c="red",
+        label="ridge modified poisson lambda = 100",
+    )
+    plt.xlabel("x value")
+    plt.ylabel("y value")
+    plt.legend()
+
+    filename = Path(
+        "assignment_1",
+        "figures",
+        "ridge_modified_poisson_fit_lmbd_100.pdf",
+    )
+    print("Saving to", filename)
+    plt.savefig(filename)
+
+    plt.figure()
+    plt.scatter(x, y, marker="o", c="blue", label="original")
+    # plot a second layer
+    plt.scatter(
+        x_rmp_lambda_500,
+        y_rmp_lambda_500,
+        marker="*",
+        c="red",
+        label="ridge modified poisson lambda = 500",
+    )
     plt.xlabel("x value")
     plt.ylabel("y value")
     plt.legend()
     filename = Path(
-        "fods_2023_assignments",
         "assignment_1",
         "figures",
-        "ridge_modified_poisson_fit.pdf",
+        "ridge_modified_poisson_fit_lmbd_500.pdf",
+    )
+    print("Saving to", filename)
+    plt.savefig(filename)
+
+    #################### Plot Learning from training ######################
+    plt.figure()
+    plt.scatter(
+        mp_list_of_function_values.keys(),
+        mp_list_of_function_values.values(),
+        marker="o",
+        c="blue",
+        label="modified poisson learning",
+    )
+    plt.xlabel("beta")
+    plt.ylabel("NLL")
+    plt.legend()
+    filename = Path(
+        "assignment_1",
+        "figures",
+        "modified_poisson_learning.pdf",
+    )
+    print("Saving to", filename)
+    plt.savefig(filename)
+
+    plt.figure()
+    plt.scatter(
+        rmp_list_of_function_values_lambda_100.keys(),
+        rmp_list_of_function_values_lambda_100.values(),
+        marker="o",
+        c="blue",
+        label="modified poisson with ridge learning lambda = 100",
+    )
+    plt.xlabel("beta")
+    plt.ylabel("NLL")
+    plt.legend()
+    filename = Path(
+        "assignment_1",
+        "figures",
+        "ridge_modified_poisson_learning_lambda_100.pdf",
     )
     print("Saving to", filename)
     plt.savefig(filename)
